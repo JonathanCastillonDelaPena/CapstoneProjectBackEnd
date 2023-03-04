@@ -22,7 +22,7 @@ routesPost.get("/post/:id", (req, res) => {
   }
 });
 
-routesPost.post("/post/editPost", (req, res) => {
+routesPost.put("/post/", (req, res) => {
   const post_id = parseInt(req.body.postId);
   const title = req.body.postTitle;
   const content = req.body.postContent;
@@ -39,8 +39,8 @@ routesPost.post("/post/editPost", (req, res) => {
   }
 });
 
-routesPost.post("/post/addPost", (req, res) => {
-  const user_id = parseInt(req.body.userId);
+routesPost.post("/post/", (req, res) => {
+  const user_id = req.body.userId;
   const title = req.body.postTitle;
   const content = req.body.postContent;
 
@@ -56,11 +56,11 @@ routesPost.post("/post/addPost", (req, res) => {
   }
 });
 
-routesPost.post("/post/deletePost", (req, res) => {
+routesPost.delete("/post/", (req, res) => {
   const post_id = req.body.postId;
   try {
     sql.query(`CALL DeletePostByID(${post_id})`, (err, rows) => {
-      res.status(201).send(rows[0]);
+      res.status(201).send(rows);
     });
   } catch (error) {
     console.log(error);
