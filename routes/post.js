@@ -23,9 +23,9 @@ routesPost.get("/post/:id", (req, res) => {
 });
 
 routesPost.put("/post/", (req, res) => {
-  const post_id = parseInt(req.body.postId);
-  const title = req.body.postTitle;
-  const content = req.body.postContent;
+  const post_id = req.body.post_id;
+  const title = req.body.title;
+  const content = req.body.content;
 
   try {
     sql.query(
@@ -39,13 +39,13 @@ routesPost.put("/post/", (req, res) => {
   }
 });
 
-routesPost.post("/post/", (req, res) => {
-  const user_id = req.body.userId;
-  const title = req.body.postTitle;
-  const content = req.body.postContent;
+routesPost.post("/post/", async (req, res) => {
+  const user_id = req.body.user_id;
+  const title = req.body.title;
+  const content = req.body.content;
 
   try {
-    sql.query(
+    await sql.query(
       `CALL AddPost(${user_id}, '${title}', '${content}')`,
       (err, rows) => {
         res.status(201).send(rows);
