@@ -3,10 +3,12 @@ const express = require("express");
 const users = require("./routes/users");
 const posts = require("./routes/post");
 const sql = require("./database/mySQL");
+const cors = require("cors");
 require("dotenv/config");
 
 //middleware
 const app = express();
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 //routes
