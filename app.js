@@ -4,6 +4,7 @@ const users = require("./routes/users");
 const posts = require("./routes/post");
 const sql = require("./database/mySQL");
 const cors = require("cors");
+
 require("dotenv/config");
 
 //middleware
