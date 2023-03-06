@@ -2,6 +2,7 @@
 const express = require('express');
 const users = require('./routes/users');
 const sql = require('./database/mySQL');
+
 require('dotenv/config');
 
 //middleware
