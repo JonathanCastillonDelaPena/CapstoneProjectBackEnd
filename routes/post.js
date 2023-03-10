@@ -52,9 +52,20 @@ routesPost.post(
     let image_url = "";
 
     if (req.file) {
-      let result = await streamUpload(req); // Stream upload to Cloudinary
-      image_public_id = result.public_id;
-      image_url = result.secure_url;
+      await streamUpload(req)
+        .then((response) => {
+          image_public_id = response.public_id;
+          image_url = response.secure_url;
+
+          console.log(`\nSuccess in uploading the image.`);
+          console.log(response);
+        })
+        .catch((error) => {
+          console.log(`\nError in uploading the image.`);
+          console.log(error);
+
+          res.status(error.http_code).send({ message: error.message });
+        });
     }
 
     try {
@@ -65,6 +76,7 @@ routesPost.post(
         }
       );
     } catch (error) {
+      console.log(`\nError in Calling the Stored Procedure: AddPost`);
       console.log(error);
     }
   }
