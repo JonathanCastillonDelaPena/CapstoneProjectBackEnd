@@ -1,7 +1,7 @@
 const routesPost = require("express").Router();
-const { response } = require("express");
 const sql = require("../database/mySQL");
-const uploadImage = require("../utils/cloudinaryImageUpload");
+const multerUpload = require("../utils/multer");
+const streamUpload = require("../utils/cloudinaryImageUpload");
 
 routesPost.get("/post/", (req, res) => {
   try {
@@ -41,39 +41,34 @@ routesPost.put("/post/", (req, res) => {
   }
 });
 
-routesPost.post("/post/", async (req, res) => {
-  const user_id = req.body.user_id;
-  const title = req.body.title;
-  const content = req.body.content;
-  let image_public_id = "";
-  let image_url = "";
+routesPost.post(
+  "/post/",
+  multerUpload.single("image_file"),
+  async (req, res) => {
+    const user_id = req.body.user_id;
+    const title = req.body.title;
+    const content = req.body.content;
+    let image_public_id = "";
+    let image_url = "";
 
-  // Upload the image file to Cloudinary first.
-  await uploadImage(req.body.image_file)
-    .then((response) => {
-      if (response.error) {
-        console.log(`\nFailed to upload image.`);
-        console.log(response.error);
-      }
+    if (req.file) {
+      let result = await streamUpload(req); // Stream upload to Cloudinary
+      image_public_id = result.public_id;
+      image_url = result.secure_url;
+    }
 
-      image_public_id = response.public_id;
-      image_url = response.secure_url;
-    })
-    .catch((error) => {
+    try {
+      await sql.query(
+        `CALL AddPost(${user_id}, '${title}', '${content}', '${image_public_id}', '${image_url}')`,
+        (err, rows) => {
+          res.status(201).send(rows);
+        }
+      );
+    } catch (error) {
       console.log(error);
-    });
-
-  try {
-    await sql.query(
-      `CALL AddPost(${user_id}, '${title}', '${content}', '${image_public_id}', '${image_url}')`,
-      (err, rows) => {
-        res.status(201).send(rows);
-      }
-    );
-  } catch (error) {
-    console.log(error);
+    }
   }
-});
+);
 
 routesPost.delete("/post/", (req, res) => {
   const post_id = req.body.postId;
