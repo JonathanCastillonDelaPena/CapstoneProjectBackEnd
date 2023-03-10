@@ -23,6 +23,7 @@ sql.connect((err) => {
     console.log("Database Connected");
     const port = process.env.PORT || 3001;
     app.listen(port, () => {
+      process.env.AUTH_OFF=='1'?console.log(`User Authentication is Off`):console.log(`User Authentication is On`)
       console.log(`Running in port ${port}`);
     });
   } else {

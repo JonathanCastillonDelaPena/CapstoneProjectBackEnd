@@ -10,7 +10,7 @@ routesUser.post('/login/', async (req,res)=>{
     })
     if(error) {
         console.log(error.message);
-        return res.json({ error: error.message });
+        return res.status(400).json({ error: error.message });
     } else {
         try {
             const username = req.body.username
@@ -19,6 +19,7 @@ routesUser.post('/login/', async (req,res)=>{
                 console.log(rows[0]);
                 const passData = rows[0].map(data=> data.pass)
                 if(passData==''){
+                    console.log(`Password data is '${passData}' \nInvalid Username`)
                     res.status(401).json({error: 'invalid'})
                 } else {
                     console.log(passData)
@@ -28,6 +29,7 @@ routesUser.post('/login/', async (req,res)=>{
                         res.json({ accessToken: accessToken })
                         console.log(await verifyToken(accessToken))
                     } else {
+                        console.log(`Username Found\nBut Password Incorrect`)
                         res.status(401).json({ error: 'invalid' })
                     }
                 }
@@ -45,7 +47,7 @@ routesUser.post('/register/', async (req,res)=>{
     })
     if(error) {
         console.log(error.message);
-        return res.send(error.message);
+        return res.status(400).send({ error: error.message });
     } else {
             try {
                 const first_name = req.body.first_name
@@ -55,15 +57,16 @@ routesUser.post('/register/', async (req,res)=>{
                 const username = req.body.username
                 const gender = req.body.gender
                 await sql.query(`CALL CheckUsername('${username}')`, async (err, rows)=>{
-                    console.log(rows[0]);
                     const nameData = rows[0].map(data=> data.username)
                     if(nameData != ''){
+                        console.log(`Username is taken: '${nameData}'`)
                         res.status(400).json({error:'username taken'})
                     } else {
+                        console.log(`Username '${username}' is valid`)
                         await sql.query(`CALL CheckEmail('${email}')`, async (err, rows)=>{
-                            console.log(rows[0]);
                             const emailData = rows[0].map(data=> data.email)
                             if(emailData != ''){
+                                console.log(`Email is taken: '${emailData}'`)
                                 return res.status(400).json({error:'email taken'})
                             } else {
                                 await sql.query(`CALL AddUser('${first_name}','${last_name}','${email}','${pass}','${username}','${gender}')`, ()=>{
@@ -81,7 +84,7 @@ routesUser.post('/register/', async (req,res)=>{
 
 //Update
 routesUser.put('/users/', authenticateToken, async (req,res)=>{
-    const {error,value} = signupSchema.validate(req.body,{
+    const {error,value} = updateSchema.validate(req.body,{
         abortEarly: false,
     })
     if(error) {
@@ -114,7 +117,7 @@ routesUser.delete('/users/', authenticateToken, async (req, res) => {
         }
     })
 
-//Show Users / Users by ID    
+//Show Users (Admin use) / Users by ID    
 routesUser.get('/users/', authenticateToken, async (req, res) => {
     const user_id = req.body.user_id;
     if(!user_id){

@@ -21,8 +21,8 @@ const verifyToken = async (accessToken) => {
 }
 
 const authenticateToken = async (req, res, next) => {
-    const isOFF = true //Turn off authentication
-    if(isOFF){
+    const isOFF = process.env.AUTH_OFF //Turn off authentication, set to 1 to turn off
+    if(isOFF=='1'){
         next()
     } else {
         token = req.body.token
