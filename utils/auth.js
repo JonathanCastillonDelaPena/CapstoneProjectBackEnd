@@ -25,15 +25,30 @@ const authenticateToken = async (req, res, next) => {
     if(isOFF=='1'){
         next()
     } else {
-        token = req.body.token
+        //token = req.body.token
         // const authHeader = await req.headers['authorization']
         // const token = authHeader && authHeader.split('')[1]
-        if(token == null) return res.sendStatus(401)
+        // if(token == null) return res.sendStatus(401)
 
-        await jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err,decode)=>{
-            if (err) return res.sendStatus(403)
-            next()
-        })
+        // await jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err,decode)=>{
+        //     if (err) return res.sendStatus(403)
+        //     next()
+        // })
+        const authHeader = await req.headers.authorization;
+        if (authHeader) {
+          const token = authHeader.split(" ")[1];
+      
+          await jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
+            if (err) {
+              return res.status(403).json("Token is not valid!");
+            }
+            // req.username = username;
+            next();
+          });
+        } else {
+            console.log('Authenication Failed')
+          res.status(401).json("You are not authenticated!");
+        }
     }
 }
 
