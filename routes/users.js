@@ -41,7 +41,7 @@ routesUser.post('/login/', async (req,res)=>{
 })
 
 //Register
-routesUser.post('/register/', async (req,res)=>{
+routesUser.post('/signup/', async (req,res)=>{
     const {error,value} = signupSchema.validate(req.body,{
         abortEarly: false,
     })

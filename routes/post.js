@@ -1,17 +1,18 @@
 const routesPost = require("express").Router();
 const sql = require("../database/mySQL");
+const {authenticateToken} = require("../utils/auth")
 
-routesPost.get("/post/", (req, res) => {
+routesPost.get("/post/", authenticateToken, (req, res) => {
   try {
     sql.query("CALL ShowAllPost()", (err, rows) => {
-      res.status(201).send(rows[0]);
+      res.status(201).send(rows);
     });
   } catch (error) {
     console.log(error);
   }
 });
 
-routesPost.get("/post/:id", (req, res) => {
+routesPost.get("/post/:id", authenticateToken, (req, res) => {
   const id = req.params.id;
   try {
     sql.query(`CALL ShowPostByID(${id})`, (err, rows) => {
@@ -22,13 +23,13 @@ routesPost.get("/post/:id", (req, res) => {
   }
 });
 
-routesPost.put("/post/", (req, res) => {
+routesPost.put("/post/", authenticateToken, async (req, res) => {
   const post_id = req.body.post_id;
   const title = req.body.title;
   const content = req.body.content;
 
   try {
-    sql.query(
+    await sql.query(
       `CALL UpdatePost(${post_id}, '${title}', '${content}')`,
       (err, rows) => {
         res.status(201).send(rows);
@@ -39,7 +40,7 @@ routesPost.put("/post/", (req, res) => {
   }
 });
 
-routesPost.post("/post/", async (req, res) => {
+routesPost.post("/post/", authenticateToken, async (req, res) => {
   const user_id = req.body.user_id;
   const title = req.body.title;
   const content = req.body.content;
@@ -56,7 +57,7 @@ routesPost.post("/post/", async (req, res) => {
   }
 });
 
-routesPost.delete("/post/", (req, res) => {
+routesPost.delete("/post/", authenticateToken, (req, res) => {
   const post_id = req.body.postId;
   try {
     sql.query(`CALL DeletePostByID(${post_id})`, (err, rows) => {
