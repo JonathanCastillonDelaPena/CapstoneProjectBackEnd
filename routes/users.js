@@ -22,12 +22,21 @@ routesUser.post('/login/', async (req,res)=>{
                     console.log(`Password data is '${passData}' \nInvalid Username`)
                     res.status(401).json({error: 'invalid'})
                 } else {
-                    console.log(passData)
+                    console.log(passData);
                     const comparedpass = await checkPassword(pass,passData[0])
                     if(comparedpass){
-                        const accessToken = await createToken(username);
-                        res.json({ accessToken: accessToken })
-                        console.log(await verifyToken(accessToken))
+                        await sql.query(`CALL CheckEmailVerified('${username}')`, async (err, rows)=>{
+                            console.log(rows[0]);
+                            const isEmailVerified = rows[0].map(data=> data.email_verified);
+                            if(isEmailVerified=='verified'){
+                                const accessToken = await createToken(username);
+                                res.json({ accessToken: accessToken });
+                                console.log(await verifyToken(accessToken));
+                            } else {
+                                console.log(`${username}'s Email is not yet verified`)
+                                res.status(401).json({ error: 'Email is not yet verified' })
+                            }
+                        });
                     } else {
                         console.log(`Username Found\nBut Password Incorrect`)
                         res.status(401).json({ error: 'invalid' })
@@ -139,4 +148,6 @@ routesUser.get('/users/', authenticateToken, async (req, res) => {
     }
     })
 
+//Resend email code
+routesUser
 module.exports = routesUser;
