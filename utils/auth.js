@@ -36,7 +36,7 @@ const authenticateToken = async (req, res, next) => {
         // })
         const authHeader = await req.headers.authorization;
         if (authHeader) {
-          const token = authHeader && authHeader.split(" ")[1];
+          const token = authHeader.split(" ")[1];
       
           await jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
             if (err) {

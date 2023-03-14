@@ -22,21 +22,12 @@ routesUser.post('/login/', async (req,res)=>{
                     console.log(`Password data is '${passData}' \nInvalid Username`)
                     res.status(401).json({error: 'invalid'})
                 } else {
-                    console.log(passData);
+                    console.log(passData)
                     const comparedpass = await checkPassword(pass,passData[0])
                     if(comparedpass){
-                        await sql.query(`CALL CheckEmailVerifiedByUsername('${username}')`, async (err, rows)=>{
-                            console.log(rows[0]);
-                            const isEmailVerified = rows[0].map(data=> data.email_verified);
-                            if(isEmailVerified=='verified'){
-                                const accessToken = await createToken(username);
-                                res.json({ accessToken: accessToken });
-                                console.log(await verifyToken(accessToken));
-                            } else {
-                                console.log(`${username}'s Email is not yet verified`)
-                                res.status(401).json({ error: 'Email is not yet verified' })
-                            }
-                        });
+                        const accessToken = await createToken(username);
+                        res.json({ accessToken: accessToken })
+                        console.log(await verifyToken(accessToken))
                     } else {
                         console.log(`Username Found\nBut Password Incorrect`)
                         res.status(401).json({ error: 'invalid' })
@@ -126,52 +117,26 @@ routesUser.delete('/users/', authenticateToken, async (req, res) => {
         }
     })
 
-//Show User Details by Username
-routesUser.get('/userdetails/', authenticateToken, async (req, res) => {
-    const username = req.body.username;
-    try {
-        await sql.query(`CALL ShowDetailsByUsername('${username}')`, (err, rows) => {
-            res.status(200).json(rows[0]);
-        });
-    } catch (error) {
-        console.log(error);
+//Show Users (Admin use) / Users by ID    
+routesUser.get('/users/', authenticateToken, async (req, res) => {
+    const user_id = req.body.user_id;
+    if(!user_id){
+        try {
+            await sql.query('CALL ShowAllUsers()', (err, rows)=>{
+                res.status(200).send(rows[0]);
+            });
+        } catch (error) {
+            console.log(error)
+        }
+    } else {
+        try {
+            await sql.query(`CALL ShowUserByID(${user_id})`, (err, rows) => {
+                res.status(200).send(rows[0]);
+            });
+        } catch (error) {
+            console.log(error);
+        }
     }
-})
-
-//Verify email
-routesUser.post('/emailverify/:email&:key', async (req, res) => {
-    console.log(req.params.email, req.params.key)
-    try {
-        await sql.query(`CALL CheckEmail('${req.params.email}')`, async (err, rows)=>{
-            const emailData = rows[0].map(data=> data.email)
-            if(emailData != ''){
-                console.log(`Email exists: '${emailData}'`)
-                await sql.query(`CALL CheckEmailVerifiedByEmail('${emailData}')`, async (err, rows)=>{
-                    console.log(rows[0]);
-                    const isEmailVerified = rows[0].map(data=> data.email_verified);
-                    if(isEmailVerified == 'verified'){
-                        console.log(`${emailData} is already verified`)
-                        res.status(400).json({ error: 'Email is already verified' })
-                    } else {
-                        if(isEmailVerified == req.params.key){
-                            console.log(`Key entered matched for ${emailData}`);
-                            await sql.query(`CALL SetEmailVerified('${emailData}')`, async (err, rows)=>{
-                                console.log(`${emailData} is now verified`)
-                                res.status(200).json({ message: 'Email is now Verified' })
-                            });
-                        } else {
-                            console.log(`Entered key:${req.params.key} and Registered key:${isEmailVerified} doesn't match.`)
-                            res.status(400).json({ error: 'invalid email or key' })
-                        }
-                    }
-                });
-            } else {
-                res.status(400).json({error:'invalid email or key'});
-            }
-        })
-    } catch (error) {
-        console.log(error);
-    }
-})
+    })
 
 module.exports = routesUser;
