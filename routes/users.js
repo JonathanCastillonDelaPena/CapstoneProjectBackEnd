@@ -2,6 +2,8 @@ const routesUser = require('express').Router();
 const sql = require('../database/mySQL')
 const {checkPassword, hashPassword, createToken, verifyToken, authenticateToken} = require('../utils/auth')
 const {signupSchema, loginSchema} = require('../utils/validator')
+const crypto = require('crypto')
+const sendVerificationEmail = require('../utils/mailHandler')
 
 //Login
 routesUser.post('/login/', async (req,res)=>{
@@ -65,6 +67,7 @@ routesUser.post('/signup/', async (req,res)=>{
                 const pass = await hashPassword(req.body.pass)
                 const username = req.body.username
                 const gender = req.body.gender
+                const email_verified = crypto.createHash('md5').update(`${Date.now()}`).digest("hex");
                 await sql.query(`CALL CheckUsername('${username}')`, async (err, rows)=>{
                     const nameData = rows[0].map(data=> data.username)
                     if(nameData != ''){
@@ -78,7 +81,9 @@ routesUser.post('/signup/', async (req,res)=>{
                                 console.log(`Email is taken: '${emailData}'`)
                                 return res.status(400).json({error:'email taken'})
                             } else {
-                                await sql.query(`CALL AddUser('${first_name}','${last_name}','${email}','${pass}','${username}','${gender}')`, ()=>{
+                                await sql.query(`CALL AddUser('${first_name}','${last_name}','${email}','${pass}','${username}','${gender}','${email_verified}')`, ()=>{
+                                    sendVerificationEmail(username,email,email_verified);
+                                    console.log(`account created for: ${username}`);
                                     res.status(201).json({message:'account created'});
                                 });
                             }
@@ -139,7 +144,7 @@ routesUser.get('/userdetails/', authenticateToken, async (req, res) => {
 })
 
 //Verify email
-routesUser.post('/emailverify/:email&:key', async (req, res) => {
+routesUser.get('/emailverify/:email&:key', async (req, res) => {
     console.log(req.params.email, req.params.key)
     try {
         await sql.query(`CALL CheckEmail('${req.params.email}')`, async (err, rows)=>{
@@ -167,6 +172,39 @@ routesUser.post('/emailverify/:email&:key', async (req, res) => {
                 });
             } else {
                 res.status(400).json({error:'invalid email or key'});
+            }
+        })
+    } catch (error) {
+        console.log(error);
+    }
+})
+
+//Resend Verification email
+routesUser.post('/emailverify/', async (req, res) => {
+    console.log(req.body.email)
+    try {
+        await sql.query(`CALL CheckEmail('${req.body.email}')`, async (err, rows)=>{
+            const emailData = rows[0].map(data=> data.email)
+            if(emailData != ''){
+                console.log(`Email exists: '${emailData}'`)
+                await sql.query(`CALL CheckEmailVerifiedByEmail('${emailData}')`, async (err, rows)=>{
+                    const isEmailVerified = rows[0].map(data=> data.email_verified);
+                    if(isEmailVerified == 'verified'){
+                        console.log(`${emailData} is already verified`)
+                        res.status(400).json({ error: 'Email is already verified' })
+                    } else {
+                        await sql.query(`CALL CheckUsernameByEmail('${emailData}')`, async (err, rows)=>{
+                            const username = rows[0].map(data=> data.username);
+                            sendVerificationEmail(username[0],emailData[0],isEmailVerified[0]);
+                            console.log(`Resent email verification for: ${emailData}`);
+                            //Send generic message to avoid exploit
+                            res.status(201).json({message:'if the address is correct, you will receive an email soon'});
+                        });
+                    }
+                });
+            } else {
+                //Send generic message to avoid exploit
+                res.status(400).json({message:'if the address is correct, you will receive an email soon'});
             }
         })
     } catch (error) {
