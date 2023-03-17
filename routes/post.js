@@ -30,11 +30,10 @@ routesPost.get("/post/", authenticateToken, (req, res) => {
 });
 
 routesPost.get("/post/:id", authenticateToken, (req, res) => {
-  const id = req.params.id;
   try {
-    const id = req.params.id;
+    const post_id = req.params.id;
 
-    sql.query(`CALL ShowPostByID(${id})`, (err, rows) => {
+    sql.query(`CALL ShowPostByID(${post_id})`, (err, rows) => {
       if (err) {
         console.log(`\nError in calling the Stored Procedure: ShowPostByID.`);
 

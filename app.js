@@ -2,6 +2,7 @@
 const express = require("express");
 const users = require("./routes/users");
 const posts = require("./routes/post");
+const comments = require("./routes/comment");
 const sql = require("./database/mySQL");
 const cors = require("cors");
 
@@ -15,6 +16,7 @@ app.use(express.urlencoded({ extended: true }));
 //routes
 app.use("/", users);
 app.use("/", posts);
+app.use("/", comments);
 
 //check connection of database and server if running
 
@@ -23,7 +25,9 @@ sql.connect((err) => {
     console.log("Database Connected");
     const port = process.env.PORT || 3001;
     app.listen(port, () => {
-      process.env.AUTH_OFF=='1'?console.log(`User Authentication is Off`):console.log(`User Authentication is On`)
+      process.env.AUTH_OFF == "1"
+        ? console.log(`User Authentication is Off`)
+        : console.log(`User Authentication is On`);
       console.log(`Running in port ${port}`);
     });
   } else {
