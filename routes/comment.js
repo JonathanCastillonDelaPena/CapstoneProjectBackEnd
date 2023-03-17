@@ -5,7 +5,7 @@ const { authenticateToken } = require("../utils/auth");
 // Get the comment count of the Post
 routesPost.get("/comment/count", authenticateToken, (req, res) => {
   try {
-    const post_id = req.body.post_id;
+    const post_id = req.query.post_id;
     sql.query(`CALL CountAllCommentByPost(${post_id})`, (err, rows) => {
       if (err) {
         console.log(
@@ -33,8 +33,8 @@ routesPost.get("/comment/count", authenticateToken, (req, res) => {
 // Get the reply comment count of the parent comment by Post
 routesPost.get("/comment/reply-count", authenticateToken, (req, res) => {
   try {
-    const post_id = req.body.post_id;
-    const parent_comment_id = req.body.parent_comment_id;
+    const post_id = req.query.post_id;
+    const parent_comment_id = req.query.parent_comment_id;
     sql.query(
       `CALL CountAllReplyCommentByPost(${post_id}, ${parent_comment_id})`,
       (err, rows) => {
@@ -67,7 +67,7 @@ routesPost.get("/comment/reply-count", authenticateToken, (req, res) => {
 // Get all parent comment of the Post
 routesPost.get("/comment/parent", authenticateToken, (req, res) => {
   try {
-    const post_id = req.body.post_id;
+    const post_id = req.query.post_id;
     sql.query(`CALL ShowAllParentCommentByPost(${post_id})`, (err, rows) => {
       if (err) {
         console.log(
@@ -97,8 +97,8 @@ routesPost.get("/comment/parent", authenticateToken, (req, res) => {
 // Get all the reply comment of the parent comment by Post
 routesPost.get("/comment/reply", authenticateToken, (req, res) => {
   try {
-    const post_id = req.body.post_id;
-    const parent_comment_id = req.body.parent_comment_id;
+    const post_id = req.query.post_id;
+    const parent_comment_id = req.query.parent_comment_id;
     sql.query(
       `CALL ShowAllReplyCommentByPost(${post_id}, ${parent_comment_id})`,
       (err, rows) => {
