@@ -1,9 +1,10 @@
 const routesUser = require('express').Router();
 const sql = require('../database/mySQL')
 const {checkPassword, hashPassword, createToken, verifyToken, authenticateToken} = require('../utils/auth')
-const {signupSchema, loginSchema} = require('../utils/validator')
+const {signupSchema, loginSchema, usernameSchema, updateSchema, emailSchema, passwordSchema} = require('../utils/validator')
 const crypto = require('crypto')
-const sendVerificationEmail = require('../utils/mailHandler')
+const {sendVerificationEmail, sendTemporaryPassword} = require('../utils/mailHandler')
+const jwt = require("jsonwebtoken");
 
 //Login
 routesUser.post('/login/', async (req,res)=>{
@@ -63,9 +64,9 @@ routesUser.post('/signup/', async (req,res)=>{
             try {
                 const first_name = req.body.first_name
                 const last_name = req.body.last_name
-                const email = req.body.email
+                const email = req.body.email.toLowerCase()
                 const pass = await hashPassword(req.body.pass)
-                const username = req.body.username
+                const username = req.body.username.toLowerCase()
                 const gender = req.body.gender
                 const email_verified = crypto.createHash('md5').update(`${Date.now()}`).digest("hex");
                 await sql.query(`CALL CheckUsername('${username}')`, async (err, rows)=>{
@@ -132,10 +133,34 @@ routesUser.delete('/users/', authenticateToken, async (req, res) => {
     })
 
 //Show User Details by Username
-routesUser.get('/userdetails/', authenticateToken, async (req, res) => {
+routesUser.post('/userdetails/', authenticateToken, async (req, res) => {
     const username = req.body.username;
     try {
         await sql.query(`CALL ShowDetailsByUsername('${username}')`, (err, rows) => {
+            res.status(200).json(rows[0]);
+        });
+    } catch (error) {
+        console.log(error);
+    }
+})
+
+//Search by Username
+routesUser.post('/search/', authenticateToken, async (req, res) => {
+    const username = req.body.username;
+    try {
+        await sql.query(`CALL SearchByUsername('${username}')`, (err, rows) => {
+            res.status(200).json(rows[0]);
+        });
+    } catch (error) {
+        console.log(error);
+    }
+})
+
+//Show all users
+routesUser.post('/userdata/', authenticateToken, async (req, res) => {
+    const username = req.body.username;
+    try {
+        await sql.query(`CALL ShowAllUsers()`, (err, rows) => {
             res.status(200).json(rows[0]);
         });
     } catch (error) {
@@ -147,7 +172,7 @@ routesUser.get('/userdetails/', authenticateToken, async (req, res) => {
 routesUser.get('/emailverify/:email&:key', async (req, res) => {
     console.log(req.params.email, req.params.key)
     try {
-        await sql.query(`CALL CheckEmail('${req.params.email}')`, async (err, rows)=>{
+        await sql.query(`CALL CheckEmail('${req.params.email.toLowerCase()}')`, async (err, rows)=>{
             const emailData = rows[0].map(data=> data.email)
             if(emailData != ''){
                 console.log(`Email exists: '${emailData}'`)
@@ -181,7 +206,7 @@ routesUser.get('/emailverify/:email&:key', async (req, res) => {
 
 //Resend Verification email
 routesUser.post('/emailverify/', async (req, res) => {
-    console.log(req.body.email)
+    console.log(`Resending verification email for ${req.body.email}`)
     try {
         await sql.query(`CALL CheckEmail('${req.body.email}')`, async (err, rows)=>{
             const emailData = rows[0].map(data=> data.email)
@@ -198,17 +223,182 @@ routesUser.post('/emailverify/', async (req, res) => {
                             sendVerificationEmail(username[0],emailData[0],isEmailVerified[0]);
                             console.log(`Resent email verification for: ${emailData}`);
                             //Send generic message to avoid exploit
-                            res.status(201).json({message:'if the address is correct, you will receive an email soon'});
+                            res.status(200).json({message:'if the address is correct, you will receive an email soon'});
                         });
                     }
                 });
             } else {
                 //Send generic message to avoid exploit
-                res.status(400).json({message:'if the address is correct, you will receive an email soon'});
+                res.status(200).json({message:'if the address is correct, you will receive an email soon'});
             }
         })
     } catch (error) {
         console.log(error);
+    }
+})
+
+//Change email
+routesUser.post('/emailchange/', authenticateToken, async (req, res) => {
+    const {error,value} = emailSchema.validate(req.body,{
+        abortEarly: false,
+    })
+    if(error) {
+        console.log(error.message);
+        return res.status(400).json({ error: error.message });
+    } else {
+        try {
+            const username = req.body.username
+            const new_email = req.body.new_email.toLowerCase();
+            const pass = req.body.pass
+            await sql.query(`CALL CheckEmailByUsername('${username}')`, async (err, rows)=>{
+                const old_email = rows[0].map(data=> data.email)
+                console.log(`Changing email from ${old_email} to ${new_email}`);
+                if(old_email == new_email){
+                    res.status(400).json({error: "you entered your current email"});
+                } else {
+                    await sql.query(`CALL CheckPassByUsername('${username}')`, async (err, rows)=>{
+                        const passData = rows[0].map(data=> data.pass)
+                        const comparedpass = await checkPassword(pass,passData[0])
+                        if(comparedpass){
+                            await sql.query(`CALL ChangeEmailByUsername('${username}','${new_email}')`, async (err, rows)=>{
+                                console.log(`Email set to: ${new_email}`);
+                                res.status(202).json({ message: 'email change successful' })
+                            });
+                        } else {
+                            console.log(`Change email failed: Password Incorrect`)
+                            res.status(401).json({ error: 'invalid password' })
+                        }
+                    });
+                }
+            });
+        } catch (error) {
+            console.log(error)
+        }
+    }
+})
+
+//Forgot password
+routesUser.post('/forgotpassword/', async (req, res) => {
+    console.log(`Trying to send temporary pass to ${req.body.email}`)
+    try {
+        await sql.query(`CALL CheckEmail('${req.body.email}')`, async (err, rows)=>{
+            const emailData = rows[0].map(data=> data.email)
+            if(emailData != ''){
+                console.log(`Email exists: '${emailData}'`)
+                await sql.query(`CALL CheckEmailVerifiedByEmail('${emailData}')`, async (err, rows)=>{
+                    const isEmailVerified = rows[0].map(data=> data.email_verified);
+                    if(isEmailVerified == 'verified'){
+                        await sql.query(`CALL CheckUsernameByEmail('${emailData}')`, async (err, rows)=>{
+                            const username = rows[0].map(data=> data.username);
+                            const temp_pass = crypto.randomBytes(4).toString('hex');
+                            const hashed_temp_pass=await hashPassword(temp_pass);
+                            console.log(username[0],emailData[0],temp_pass,hashed_temp_pass);
+                            await sql.query(`CALL ChangePassByUsername('${username}','${hashed_temp_pass}')`);
+                            sendTemporaryPassword(username[0],emailData[0],temp_pass);
+                            console.log(`Issued temporary pass to: ${emailData}`);
+                            //Send generic message to avoid exploit
+                            res.status(200).json({message:'if the address is correct, your temporary pass will be delivered to your email'});
+                        });
+                    } else {
+                        console.log(`${emailData} is unverified`)
+                        res.status(400).json({error:'your email is not yet verified'});
+                    }
+                });
+            } else {
+                //Send generic message to avoid exploit
+                res.status(200).json({message:'if the address is correct, your temporary pass will be delivered to your email'});
+            }
+        })
+    } catch (error) {
+        console.log(error);
+    }
+})
+
+//Change username
+routesUser.post('/usernamechange/', authenticateToken, async (req, res) => {
+    const {error,value} = usernameSchema.validate(req.body,{
+        abortEarly: false,
+    })
+    if(error) {
+        console.log(error.message);
+        return res.status(400).json({ error: error.message });
+    } else {
+        try {
+            const username = req.body.username.toLowerCase()
+            const new_username = req.body.new_username.toLowerCase()
+            const pass = req.body.pass
+            if(username == new_username){
+                res.status(400).json({error: "you entered your current username"});
+            }else{
+                await sql.query(`CALL CheckPassByUsername('${username}')`, async (err, rows)=>{
+                    console.log(rows[0]);
+                    const passData = rows[0].map(data=> data.pass)
+                    if(passData==''){
+                        console.log(`Password data is '${passData}'`)
+                        res.status(401).json({error: 'invalid password'})
+                    } else {
+                        console.log(passData);
+                        const comparedpass = await checkPassword(pass,passData[0])
+                        if(comparedpass){
+                            await sql.query(`CALL ChangeUsername('${username}','${new_username}')`, async (err, rows)=>{
+                                console.log(rows[0]);
+                                res.status(200).json({ message: 'username changed successfully' })
+                            });
+                        } else {
+                            console.log(`Change username failed: Password Incorrect`)
+                            res.status(401).json({ error: 'invalid password' })
+                        }
+                    }
+                });
+            }
+        } catch (error) {
+            console.log(error)
+        }
+    }
+})
+
+//Change password
+routesUser.post('/passwordchange/', authenticateToken, async (req, res) => {
+    const {error,value} = passwordSchema.validate(req.body,{
+        abortEarly: false,
+    })
+    if(error) {
+        console.log(error.message);
+        return res.status(400).json({ error: error.message });
+    } else {
+        try {
+            const username = req.body.username.toLowerCase()
+            const pass = req.body.pass
+            const new_pass = req.body.new_pass
+            if(pass == new_pass){
+                res.status(400).json({error: "you entered your current password"});
+            }else{
+                await sql.query(`CALL CheckPassByUsername('${username}')`, async (err, rows)=>{
+                    console.log(rows[0]);
+                    const passData = rows[0].map(data=> data.pass)
+                    if(passData==''){
+                        console.log(`Password data is '${passData}'`)
+                        res.status(401).json({error: 'invalid password'})
+                    } else {
+                        console.log(passData);
+                        const comparedpass = await checkPassword(pass,passData[0])
+                        if(comparedpass){
+                            const hashed_new_pass=await hashPassword(new_pass);
+                            console.log(hashed_new_pass);
+                            await sql.query(`CALL ChangePassByUsername('${username}','${hashed_new_pass}')`);
+                            console.log(`${username} changed password`);
+                            //Send generic message to avoid exploit
+                            res.status(200).json({message:'change password successful'});
+                        } else {
+                            console.log(`Change username failed: Password Incorrect`)
+                            res.status(401).json({ error: 'invalid password' })
+                        }
+                    }
+                });
+            }
+        } catch (error) {
+            console.log(error)
+        }
     }
 })
 
