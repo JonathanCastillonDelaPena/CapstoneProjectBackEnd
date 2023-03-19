@@ -126,4 +126,104 @@ routesPost.get("/comment/reply", authenticateToken, (req, res) => {
   }
 });
 
+// Add a parent comment to the Post
+routesPost.post("/comment/parent", authenticateToken, (req, res) => {
+  try {
+    const post_id = req.body.post_id;
+    const user_id = req.body.user_id;
+    const comment = req.body.comment;
+    sql.query(
+      `CALL AddParentCommentByPost(${post_id}, ${user_id}, '${comment}')`,
+      (err, rows) => {
+        if (err) {
+          console.log(
+            `\nError in calling the Stored Procedure: AddParentCommentByPost.`
+          );
+
+          res.status(400).send(err);
+          throw err;
+        }
+        if (rows) {
+          console.log(
+            `\nSuccess in calling the Stored Procedure: AddParentCommentByPost.`
+          );
+          console.log(rows);
+
+          res.status(201).send(rows);
+        }
+      }
+    );
+  } catch (error) {
+    console.log(`\nError: Something went wrong in adding a Parent Comment.`);
+    console.log(error);
+  }
+});
+
+// Add a reply comment to the Post
+routesPost.post("/comment/reply", authenticateToken, (req, res) => {
+  try {
+    const parent_comment_id = req.body.parent_comment_id;
+    const post_id = req.body.post_id;
+    const user_id = req.body.user_id;
+    const comment = req.body.comment;
+    sql.query(
+      `CALL AddReplyComment(${parent_comment_id}, ${post_id}, ${user_id}, '${comment}')`,
+      (err, rows) => {
+        if (err) {
+          console.log(
+            `\nError in calling the Stored Procedure: AddReplyComment.`
+          );
+          console.log(err);
+
+          res.status(400).send(err);
+          // throw err;
+        }
+        if (rows) {
+          console.log(
+            `\nSuccess in calling the Stored Procedure: AddReplyComment.`
+          );
+          console.log(rows);
+
+          res.status(201).send(rows);
+        }
+      }
+    );
+  } catch (error) {
+    console.log(`\nError: Something went wrong in adding a Reply Comment.`);
+    console.log(error);
+  }
+});
+
+routesPost.delete("/comment/", authenticateToken, (req, res) => {
+  try {
+    const post_id = req.body.post_id;
+    const comment_id = req.body.comment_id;
+    const user_id = req.body.user_id;
+    sql.query(
+      `CALL DeleteCommentByPost(${post_id}, ${comment_id}, ${user_id})`,
+      (err, rows) => {
+        if (err) {
+          console.log(
+            `\nError in calling the Stored Procedure: DeleteCommentByPost.`
+          );
+
+          res.status(400).send(err);
+          throw err;
+        }
+        if (rows) {
+          console.log(
+            `\nSuccess in calling the Stored Procedure: DeleteCommentByPost.`
+          );
+          console.log(rows);
+
+          res.status(201).send(rows);
+        }
+      }
+    );
+  } catch (error) {
+    console.log(`\nError: Something went wrong in deleting a Comment.`);
+    console.log(error);
+  }
+});
+
 module.exports = routesPost;
