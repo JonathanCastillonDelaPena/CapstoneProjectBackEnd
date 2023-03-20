@@ -20,4 +20,22 @@ const loginSchema = joi.object({
     pass: joi.string().min(8).trim(true).required(),
 });
 
-module.exports = {signupSchema,loginSchema,updateSchema}
+const usernameSchema = joi.object({
+    username: joi.string().alphanum().min(3).max(25).trim(true).required(),
+    new_username: joi.string().alphanum().min(3).max(25).trim(true).required(),
+    pass: joi.string().min(8).trim(true).required(),
+});
+
+const emailSchema = joi.object({
+    username: joi.string().alphanum().min(3).max(25).trim(true).required(),
+    new_email: joi.string().email().lowercase().trim(true).required(),
+    pass: joi.string().min(8).trim(true).required(),
+});
+
+const passwordSchema = joi.object({
+    username: joi.string().alphanum().min(3).max(25).trim(true).required(),
+    pass: joi.string().min(8).trim(true).required(),
+    new_pass: joi.string().min(8).trim(true).required(),
+});
+
+module.exports = {signupSchema,loginSchema,updateSchema,emailSchema,usernameSchema,passwordSchema}

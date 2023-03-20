@@ -4,6 +4,7 @@ const users = require("./routes/users");
 const posts = require("./routes/post");
 const comments = require("./routes/comment");
 const sql = require("./database/mySQL");
+const friendlist = require("./routes/friendlist")
 const cors = require("cors");
 
 require("dotenv/config");
@@ -17,6 +18,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/", users);
 app.use("/", posts);
 app.use("/", comments);
+app.use("/", friendlist);
 
 //check connection of database and server if running
 
