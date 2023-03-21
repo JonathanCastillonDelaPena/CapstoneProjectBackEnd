@@ -7,6 +7,67 @@ const {
   deleteUploadedImage,
 } = require("../utils/cloudinaryImageHandler");
 
+routesPost.get("/post/paginated", authenticateToken, (req, res) => {
+  try {
+    const limit = req.query.limit;
+    const last_fetched_record = req.query.last_fetched_record;
+
+    sql.query(
+      `CALL ShowAllPostPaginated(${limit}, ${last_fetched_record})`,
+      (err, rows) => {
+        if (err) {
+          console.log(
+            `\nError in calling the Stored Procedure: ShowAllPostPaginated.`
+          );
+
+          res.status(400).send(err);
+          throw err;
+        }
+        if (rows[0]) {
+          console.log(
+            `\nSuccess in calling the Stored Procedure: ShowAllPostPaginated.`
+          );
+          console.log(`Row Count: ${rows[0].length}`);
+
+          res.status(201).send(rows[0]);
+        }
+      }
+    );
+  } catch (error) {
+    console.log(`\nError: Something went wrong in fetching Paginated Post.`);
+    console.log(error);
+  }
+});
+
+routesPost.get("/post/latest", authenticateToken, (req, res) => {
+  try {
+    sql.query(
+      `CALL ShowLatestPost()`,
+      (err, rows) => {
+        if (err) {
+          console.log(
+            `\nError in calling the Stored Procedure: ShowLatestPost.`
+          );
+
+          res.status(400).send(err);
+          throw err;
+        }
+        if (rows[0]) {
+          console.log(
+            `\nSuccess in calling the Stored Procedure: ShowLatestPost.`
+          );
+          console.log(`Row Count: ${rows[0].length}`);
+
+          res.status(201).send(rows[0]);
+        }
+      }
+    );
+  } catch (error) {
+    console.log(`\nError: Something went wrong in fetching Latest Post.`);
+    console.log(error);
+  }
+});
+
 routesPost.get("/post/", authenticateToken, (req, res) => {
   try {
     sql.query("CALL ShowAllPost()", (err, rows) => {

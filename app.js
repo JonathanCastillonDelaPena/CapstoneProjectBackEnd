@@ -4,7 +4,7 @@ const users = require("./routes/users");
 const posts = require("./routes/post");
 const comments = require("./routes/comment");
 const sql = require("./database/mySQL");
-const friendlist = require("./routes/friendlist")
+const friendlist = require("./routes/friendlist");
 const cors = require("cors");
 
 require("dotenv/config");
