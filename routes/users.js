@@ -187,7 +187,7 @@ routesUser.get('/emailverify/:email&:key', async (req, res) => {
                             console.log(`Key entered matched for ${emailData}`);
                             await sql.query(`CALL SetEmailVerified('${emailData}')`, async (err, rows)=>{
                                 console.log(`${emailData} is now verified`)
-                                res.status(200).json({ message: 'Email is now Verified' })
+                                res.status(200).redirect('https://kodebook.tristanviernes.com')
                             });
                         } else {
                             console.log(`Entered key:${req.params.key} and Registered key:${isEmailVerified} doesn't match.`)
