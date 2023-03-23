@@ -21,6 +21,7 @@ const {
   sendTemporaryPassword,
 } = require("../utils/mailHandler");
 const jwt = require("jsonwebtoken");
+const { constants } = require("fs");
 
 //Login
 routesUser.post("/login/", async (req, res) => {
@@ -190,25 +191,64 @@ routesUser.post("/userdetails/", authenticateToken, async (req, res) => {
 
 //Show User Details by PostID
 routesUser.post("/post/userdetails/", authenticateToken, async (req, res) => {
-    const post_id = req.body.post_id;
-    try {
-      await sql.query(
-        `CALL ShowDetailsByPostID('${post_id}')`,
-        (err, rows) => {
-          res.status(200).json(rows[0]);
-        }
-      );
-    } catch (error) {
-      console.log(error);
-    }
-  });
+  const post_id = req.body.post_id;
+  try {
+    await sql.query(`CALL ShowDetailsByPostID('${post_id}')`, (err, rows) => {
+      res.status(200).json(rows[0]);
+    });
+  } catch (error) {
+    console.log(error);
+  }
+});
 
 //Search by Username
+// routesUser.post("/search/", authenticateToken, async (req, res) => {
+//   const query = req.body.query;
+//   try {
+//     await sql.query(`CALL SearchByName('${query}')`, (err, rows) => {
+//       res.status(200).json(rows[0]);
+//     });
+//   } catch (error) {
+//     console.log(error);
+//   }
+// });
+
+// Search by Name
 routesUser.post("/search/", authenticateToken, async (req, res) => {
-  const username = req.body.username;
   try {
-    await sql.query(`CALL SearchByUsername('${username}')`, (err, rows) => {
-      res.status(200).json(rows[0]);
+
+    // Sanitize the query by removing any empty string
+    // and splitting the query into an array.
+    const queryArr = req.body.query.split(" ").filter((query) => query);
+
+    if (queryArr.length === 0) {
+      res.status(400).json({ error: "Query cannot be empty." });
+    }
+
+    let result = [];
+
+    const interval = 100; // Delay between two iterations (in milliseconds)
+    let promise = Promise.resolve();
+    queryArr.forEach((query) => {
+      promise = promise.then(function () {
+        sql.query(`CALL SearchByName('${query}')`, (err, rows) => {
+          result.push(...rows[0]);
+        });
+
+        return new Promise(function (resolve) {
+          setTimeout(resolve, interval);
+        });
+      });
+    });
+    
+    // Loop is finished.
+    promise.then(function () {
+      result = result.filter(
+        (value, index, self) =>
+          index === self.findIndex((t) => t.user_id === value.user_id)
+      );
+
+      res.status(200).json(result);
     });
   } catch (error) {
     console.log(error);
